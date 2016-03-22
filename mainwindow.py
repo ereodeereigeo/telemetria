@@ -27,7 +27,7 @@ class MainWindow (QtGui.QMainWindow, mainwindow.Ui_MainWindow):
         self.thread_serial = ThreadSerial()
         self.thread_wifi = ThreadSocketUDP()
 
-        #senales botones
+        # senales botones
 
         self.conectarWifi.clicked.connect(self.get_config_wifi)
         self.conectarXBee.clicked.connect(self.get_config_serial)
@@ -68,12 +68,13 @@ class MainWindow (QtGui.QMainWindow, mainwindow.Ui_MainWindow):
             self.port = dialgo_wifi.port
 
     @QtCore.pyqtSlot(dict)
-    def recivir_data_wifi(self):
-        pass
+    def recivir_data_wifi(self, data):
+        print(data)
 
     @QtCore.pyqtSlot(dict)
-    def recivir_data_serial(self):
-        pass
+    def recivir_data_serial(self, data):
+
+        print(data)
 
     def serial_terminado(self):
         pass
@@ -99,7 +100,8 @@ class ThreadSerial(QtCore.QThread):
     def run(self):
         self.alive = True
         while self.alive:
-            print('THREAD SERIAL', datetime.datetime.now())
+            data_salida = dict(string='THREAD SERIAL', hora=datetime.datetime.now())
+            self.serial_signal.emit(data_salida)
             time.sleep(1)
 
 
@@ -120,7 +122,8 @@ class ThreadSocketUDP(QtCore.QThread):
     def run(self):
         self.alive = True
         while self.alive:
-            print('THREAD SOCKET UDP', datetime.datetime.now())
+            data_salida = dict(string='THREAD SOCKET UDP', hora=datetime.datetime.now())
+            self.udp_signal.emit(data_salida)
             time.sleep(1)
 
 if __name__ == '__main__':
