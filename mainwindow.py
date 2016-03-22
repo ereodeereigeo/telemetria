@@ -1,5 +1,3 @@
-from PyQt4 import QtCore, QtGui
-import pyqtgraph as pg
 import socket
 import codecs
 import numpy as np
@@ -10,6 +8,8 @@ from collections import deque
 import time
 import datetime
 import pandas as pd
+import pyqtgraph as pg
+from PyQt4 import QtCore, QtGui
 from ui.disenos.mainwindow import mainwindow
 from ui.dialogs.DialogEthernet import EthernetDialog
 from ui.dialogs.DialogSerial import SerialDialog
