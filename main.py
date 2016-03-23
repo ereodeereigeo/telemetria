@@ -24,4 +24,4 @@ if __name__ == '__main__':
     sys.exit( app.exec_() )
     timer = QtCore.QTimer()
     timer.timeout.connect(w.updateUi())
-    timer.start(1)
+    timer.start()
