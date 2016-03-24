@@ -23,7 +23,15 @@ diccionario_nuevo = dicc_nuevo.diccionario_nuevo
 diccionario_final = {}
 dataframe_timestamp = pd.DataFrame(columns=diccionario_nuevo.keys())
 dataframe_global = pd.DataFrame(columns=diccionario_nuevo.keys())
-
+pg.setConfigOption('background', 'w')
+color1 = (15, 45, 106)
+color2 = (127, 143, 175)
+color3 = (215, 12, 12)
+color4 = (255, 128, 128)
+color5 = (0, 32, 96)
+color6 = (0, 174, 75)
+color7 = (255, 0, 0)
+color8 = (0, 175, 77)
 
 
 
@@ -54,6 +62,47 @@ class MainWindow (QtGui.QMainWindow, mainwindow.Ui_MainWindow):
         self.thread_wifi.udp_signal.connect(self.recibir_data_wifi)
         self.thread_wifi.finished.connect(self.recibir_data_wifi)
 
+        layout_izquierda_1 = QtGui.QVBoxLayout()
+        layout_izquierda_2 = QtGui.QVBoxLayout()
+        layout_izquierda_3 = QtGui.QVBoxLayout()
+
+        self.plot_izquierda_1 = pg.PlotWidget()
+        self.plot_izquierda_2 = pg.PlotWidget()
+        self.plot_izquierda_3 = pg.PlotWidget()
+        self.curva1 = self.plot_izquierda_1.plot(pen=color1)
+        self.curva1_1 = self.plot_izquierda_1.plot(pen=color2)
+        self.curva2 = self.plot_izquierda_2.plot(pen=color2)
+        self.curva3 = self.plot_izquierda_3.plot(pen=color3)
+
+        layout_izquierda_1.addWidget(self.plot_izquierda_1)
+        layout_izquierda_2.addWidget(self.plot_izquierda_2)
+        layout_izquierda_3.addWidget(self.plot_izquierda_3)
+
+        self.graphicsView.setLayout(layout_izquierda_1)
+        self.graphicsView_2.setLayout(layout_izquierda_2)
+        self.graphicsView_3.setLayout(layout_izquierda_3)
+
+        layout_derecha_1 = QtGui.QVBoxLayout()
+        layout_derecha_2 = QtGui.QVBoxLayout()
+        layout_derecha_3 = QtGui.QVBoxLayout()
+
+        self.plot_derecha_4 = pg.PlotWidget()
+        self.plot_derecha_5 = pg.PlotWidget()
+        self.plot_derecha_6 = pg.PlotWidget()
+        self.curva4 = self.plot_derecha_4.plot(pen=color1)
+        self.curva4_1 = self.plot_derecha_4.plot(pen=color2)
+        self.curva5 = self.plot_derecha_5.plot(pen=color5)
+        self.curva6 = self.plot_derecha_6.plot(pen=color6)
+
+        layout_derecha_1.addWidget(self.plot_derecha_4)
+        layout_derecha_2.addWidget(self.plot_derecha_5)
+        layout_derecha_3.addWidget(self.plot_derecha_6)
+
+        self.graphicsView_4.setLayout(layout_derecha_1)
+        self.graphicsView_5.setLayout(layout_derecha_2)
+        self.graphicsView_6.setLayout(layout_derecha_3)
+
+
     def iniciar_comunicaciones_serial(self):
         if not self.thread_serial.alive:
             self.thread_serial.start()
@@ -78,6 +127,13 @@ class MainWindow (QtGui.QMainWindow, mainwindow.Ui_MainWindow):
             print('dialogo_ethernet', 'ip:', dialogo_wifi.ip, 'puerto:', dialogo_wifi.port)
             self.ip = dialogo_wifi.ip
             self.port = dialogo_wifi.port
+
+    def setup_grafico_izquierda(self):
+        pass
+
+    def setup_grafico_derecha(self):
+        pass
+
 
     @QtCore.pyqtSlot(dict)
     def recibir_data_wifi(self, data):
@@ -155,11 +211,36 @@ class MainWindow (QtGui.QMainWindow, mainwindow.Ui_MainWindow):
                     else:
                         diccionario_final[elemento] = [float('nan')]
                         diccionario_nuevo[elemento] = []
-        diccionario_nuevo = dicc_nuevo.diccionario_nuevo
-        if diccionario_final['velocity_rpm_m1'][0] != float('nan'):
-            self.doubleSpinBox_23.setValue(diccionario_final['velocity_rpm_m1'][0])
-        dataframe_timestamp = pd.DataFrame(diccionario_final, index =[datetime.datetime.now().replace(microsecond = 0)] )
-        dataframe_global = dataframe_global.append(dataframe_timestamp)
+            diccionario_nuevo = dicc_nuevo.diccionario_nuevo
+            dataframe_timestamp = pd.DataFrame(diccionario_final, index =[datetime.datetime.now().replace(microsecond = 0)] )
+            dataframe_global = dataframe_global.append(dataframe_timestamp)
+            # Asignar velocidad actual
+            self.vel_actual_1.setValue(dataframe_timestamp.velocity_ms_m1*3.6)
+            self.vel_actual_2.setValue(dataframe_timestamp.velocity_ms_m1*3.6)
+            largo = len(dataframe_global)
+            #Asignar velocidad promedio 15 minutos
+            # Idea: Resetear al salir del punto de control
+            self.vel_cuarto_1.setValue(dataframe_global.velocity_ms_m1[largo-15*60:largo].mean()*3.6)
+            self.vel_cuarto_2.setValue(dataframe_global.velocity_ms_m1[largo-15*60:largo].mean()*3.6)
+            crono = dataframe_timestamp.index[0]-dataframe_global.head(1).index[0]
+            self.tiempo_crono_1.setTime(QtCore.QTime(crono.components.hours,\
+                                                     crono.components.minutes,\
+                                                     crono.components.seconds))
+            self.tiempo_crono_2.setTime(QtCore.QTime(crono.components.hours,\
+                                                     crono.components.minutes,\
+                                                     crono.components.seconds))
+            self.curva1.setData(dataframe_global.velocity_ms_m1)
+            self.curva1_1.setData(dataframe_global.velocity_ms_m2)
+            self.curva4.setData(dataframe_global.velocity_ms_m1)
+            self.curva4_1.setData(dataframe_global.velocity_ms_m2)
+            #set SOC
+            self.soc_1.setValue(dataframe_timestamp.soc_percentage)
+            self.soc_2.setValue(dataframe_timestamp.soc_percentage)
+            #self.T_max_baterias_1.setValue(dataframe_global.cell_temperature_1.tail(1)/10)
+            try:
+                self.cargaBaterias.setValue(int(dataframe_timestamp.bus_voltage_m1.values[0]))
+            except ValueError:
+                pass
 
     @QtCore.pyqtSlot(dict)
     def recibir_data_serial(self, data):
