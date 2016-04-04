@@ -149,4 +149,7 @@ diccionario_nuevo = {'1.9v_supply_m1': [],
  'velocity_rpm_m1': [],
  'velocity_rpm_m2': [],
  'vq_m1': [],
- 'vq_m2': []}
+ 'vq_m2': [],
+ 'reservado': [],
+ 'nada':[]
+                     }

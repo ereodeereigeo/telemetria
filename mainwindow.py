@@ -7,7 +7,7 @@ from collections import deque
 # import serial
 import time
 import datetime
-import dicc_variables
+import dicc_variables2
 import dicc_nuevo
 import decodificacion as dec
 import pandas as pd
@@ -102,6 +102,33 @@ class MainWindow (QtGui.QMainWindow, mainwindow.Ui_MainWindow):
         self.graphicsView_5.setLayout(layout_derecha_2)
         self.graphicsView_6.setLayout(layout_derecha_3)
 
+        self.guardar_bitacora_1.pressed.connect(self.guardar_en_bitacora_1)
+        self.guardar_bitacora_2.pressed.connect(self.guardar_en_bitacora_2)
+        self.timer = QtCore.QTimer(self)
+        self.timer.setInterval(1000)
+        self.timer.timeout.connect(self.displayTime)
+        self.timer.start()
+
+
+
+    def displayTime(self):
+        self.hora_bitacora_1.setDateTime(QtCore.QDateTime.currentDateTime())
+        self.hora_bitacora_2.setDateTime(QtCore.QDateTime.currentDateTime())
+        self.fecha.setDateTime(QtCore.QDateTime.currentDateTime())
+
+    def guardar_en_bitacora_1(self):
+        self.bitacora_1.append(self.hora_bitacora_1.text())
+        self.bitacora_1.append(self.insert_on_bitacora_1.toHtml())
+        self.bitacora_1.append('')
+        self.insert_on_bitacora_1.setText('')
+        self.bitacora_2.setText(self.bitacora_1.toHtml())
+
+    def guardar_en_bitacora_2(self):
+        self.bitacora_2.append(self.hora_bitacora_2.text())
+        self.bitacora_2.append(self.insert_on_bitacora_2.toHtml())
+        self.bitacora_2.append('')
+        self.insert_on_bitacora_2.setText('')
+        self.bitacora_1.setText(self.bitacora_2.toHtml())
 
     def iniciar_comunicaciones_serial(self):
         if not self.thread_serial.alive:
@@ -146,22 +173,24 @@ class MainWindow (QtGui.QMainWindow, mainwindow.Ui_MainWindow):
         inicio_datos = 44
         fin_datos = inicio_datos + 16
         lista_datos = []
-        #print (hexdata)
         while len(ident)>0:
             ident = hexdata[inicio:fin]
             datos = hexdata[inicio_datos:fin_datos]
-            if ident in dicc_variables.dicc_variables.keys():
+            if ident in dicc_variables2.dicc_variables.keys():
                 listaid.append(ident)
                 lista_datos.append(datos)
             inicio = inicio + 28
             inicio_datos = inicio_datos + 28
             fin_datos = fin_datos +28
             fin = fin + 28
+        '''for x in listaid:
+            if x == b'6f9':
+                print (hexdata)'''
         for indice in range(len(listaid)):
             inicio_dato = 0
             try:
                 #print('bien')
-                for elemento in dicc_variables.dicc_variables[listaid[indice]]:
+                for elemento in dicc_variables2.dicc_variables[listaid[indice]]:
                     fin_dato = inicio_dato + elemento[1]
                     dato = lista_datos[indice][inicio_dato:fin_dato]
                     #invertir dato
@@ -190,14 +219,15 @@ class MainWindow (QtGui.QMainWindow, mainwindow.Ui_MainWindow):
                         elif elemento[2] == 'data_32':
                             dato_conv = dec.data_32(dato_inv)
                         elif elemento[2] == 'nada':
-                            dato_conv = 0
+                            dato_conv = 0.0
                         elif elemento[2] == 'despues':
-                            dato_conv = 0
+                            dato_conv = 0.0
                         else:
                             inicio_dato = 0
                             dato_conv = 0
                         diccionario_nuevo[elemento[0]].append(dato_conv)
                         inicio_dato = inicio_dato+ elemento[1]
+
             except KeyError:
                 #print('keyError')
                 pass
@@ -206,8 +236,13 @@ class MainWindow (QtGui.QMainWindow, mainwindow.Ui_MainWindow):
             previous = tiempo_actual
             for elemento in diccionario_nuevo.keys():
                     if len(diccionario_nuevo[elemento])>0:
-                        diccionario_final[elemento] = [sum(diccionario_nuevo[elemento])/len(diccionario_nuevo[elemento])]
-                        diccionario_nuevo[elemento] = []
+                        if (elemento == 'limit_flags_m1') or (elemento == 'limit_flags_m2')\
+                                or (elemento == 'error_flags_m1') or (elemento == 'error_flags_m2'):
+                            diccionario_final[elemento] = max(diccionario_nuevo[elemento])
+                            diccionario_nuevo[elemento] = []
+                        else:
+                            diccionario_final[elemento] = [sum(diccionario_nuevo[elemento])/len(diccionario_nuevo[elemento])]
+                            diccionario_nuevo[elemento] = []
                     else:
                         diccionario_final[elemento] = [float('nan')]
                         diccionario_nuevo[elemento] = []
@@ -234,13 +269,189 @@ class MainWindow (QtGui.QMainWindow, mainwindow.Ui_MainWindow):
             self.curva4.setData(dataframe_global.velocity_ms_m1)
             self.curva4_1.setData(dataframe_global.velocity_ms_m2)
             #set SOC
-            self.soc_1.setValue(dataframe_timestamp.soc_percentage)
-            self.soc_2.setValue(dataframe_timestamp.soc_percentage)
+            self.soc_1.setValue(dataframe_timestamp.soc_ah)
+            self.soc_2.setValue(dataframe_timestamp.soc_ah)
+            # N es el número de celda, y c es el numero de cmu
+            self.voltaje_min_1.setText(str(round(dataframe_timestamp.minimum_cell_voltage.values[0]/1000,2))+' V C'\
+                                       +str(int(dataframe_timestamp.cmu_number_minv.values[0]))+ ' N'\
+                                       +str(int(dataframe_timestamp.cell_number_minv.values[0])))
+            self.voltaje_min_2.setText(str(round(dataframe_timestamp.minimum_cell_voltage.values[0]/1000,2))+' V C'\
+                                       +str(int(dataframe_timestamp.cmu_number_minv.values[0]))+ ' N'\
+                                       +str(int(dataframe_timestamp.cell_number_minv.values[0])))
+            self.voltaje_max_1.setText(str(round(dataframe_timestamp.maximum_cell_voltage.values[0]/1000,2))+' V C'\
+                                       +str(int(dataframe_timestamp.cmu_number_maxv.values[0]))+ ' N'\
+                                       +str(int(dataframe_timestamp.cell_number_maxv.values[0])))
+            self.voltaje_max_2.setText(str(round(dataframe_timestamp.maximum_cell_voltage.values[0]/1000,2))+' V C'\
+                                       +str(int(dataframe_timestamp.cmu_number_maxv.values[0]))+ ' N'\
+                                       +str(int(dataframe_timestamp.cell_number_maxv.values[0])))
             #self.T_max_baterias_1.setValue(dataframe_global.cell_temperature_1.tail(1)/10)
-            try:
-                self.cargaBaterias.setValue(int(dataframe_timestamp.bus_voltage_m1.values[0]))
-            except ValueError:
-                pass
+            #print(dataframe_timestamp.maximum_cell_temp/10)
+            self.t_max_1.setText(str(dataframe_timestamp.maximum_cell_temp.values[0]/10)+' °C cmu '\
+                                 +str(int(dataframe_timestamp.cmu_number_maxt.values[0])))
+            self.t_max_2.setText(str(dataframe_timestamp.maximum_cell_temp.values[0]/10)+' °C cmu '\
+                                 +str(int(dataframe_timestamp.cmu_number_maxt.values[0])))
+            # Mostrar valores detallados de motores
+            self.vel1_1.setValue(dataframe_timestamp.velocity_ms_m1*3.6)
+            self.vel2_1.setValue(dataframe_timestamp.velocity_ms_m2*3.6)
+            self.vel1_2.setValue(dataframe_timestamp.velocity_ms_m1*3.6)
+            self.vel2_2.setValue(dataframe_timestamp.velocity_ms_m2*3.6)
+
+            if dataframe_timestamp.limit_flags_m1.values[0] == 1:
+                self.limites_m1_1.setText('Voltaje Salida PWM')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 2:
+                self.limites_m1_1.setText('Corriente Motor')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 4:
+                self.limites_m1_1.setText('Velocidad')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 8:
+                self.limites_m1_1.setText('Corriente BUS DC')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 16:
+                self.limites_m1_1.setText('Voltaje BUS Max')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 32:
+                self.limites_m1_1.setText('Voltaje BUS Min')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 64:
+                self.limites_m1_1.setText('Temp. Motor')
+            else:
+                self.limites_m1_1.setText('---')
+
+            if dataframe_timestamp.limit_flags_m1.values[0] == 1:
+                self.limites_m1_2.setText('Voltaje Salida PWM')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 2:
+                self.limites_m1_2.setText('Corriente Motor')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 4:
+                self.limites_m1_2.setText('Velocidad')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 8:
+                self.limites_m1_2.setText('Corriente BUS DC')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 16:
+                self.limites_m1_2.setText('Voltaje BUS Max')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 32:
+                self.limites_m1_2.setText('Voltaje BUS Min')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 64:
+                self.limites_m1_2.setText('Temp. Motor')
+            else:
+                self.limites_m1_2.setText('---')
+
+            if dataframe_timestamp.limit_flags_m2.values[0] == 1:
+                self.limites_m2_1.setText('Voltaje Salida PWM')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 2:
+                self.limites_m2_1.setText('Corriente Motor')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 4:
+                self.limites_m2_1.setText('Velocidad')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 8:
+                self.limites_m2_1.setText('Corriente BUS DC')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 16:
+                self.limites_m2_1.setText('Voltaje BUS Max')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 32:
+                self.limites_m2_1.setText('Voltaje BUS Min')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 64:
+                self.limites_m2_1.setText('Temp. Motor')
+            else:
+                self.limites_m2_1.setText('---')\
+
+            if dataframe_timestamp.limit_flags_m2.values[0] == 1:
+                self.limites_m2_2.setText('Voltaje Salida PWM')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 2:
+                self.limites_m2_2.setText('Corriente Motor')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 4:
+                self.limites_m2_2.setText('Velocidad')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 8:
+                self.limites_m2_2.setText('Corriente BUS DC')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 16:
+                self.limites_m2_2.setText('Voltaje BUS Max')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 32:
+                self.limites_m2_2.setText('Voltaje BUS Min')
+            elif dataframe_timestamp.limit_flags_m1.values[0] == 64:
+                self.limites_m2_2.setText('Temp. Motor')
+            else:
+                self.limites_m2_2.setText('---')
+
+
+
+            # Errores
+            if dataframe_timestamp.error_flags_m1.values[0] == 1:
+                self.mot1_error_1.setText('---')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 2:
+                self.mot1_error_1.setText('SW SobreCorriente')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 4:
+                self.mot1_error_1.setText('DC BUS SobreVolt')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 8:
+                self.mot1_error_1.setText('Secuencia Hall Mala')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 16:
+                self.mot1_error_1.setText('Watchdog Reset')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 32:
+                self.mot1_error_1.setText('CFG Error')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 64:
+                self.mot1_error_1.setText('15V. UV')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 128:
+                self.mot1_error_1.setText('IGBT Desaturación')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 256:
+                self.mot1_error_1.setText('+15% vel lim mot')
+
+            else:
+                self.mot1_error_1.setText('---')
+
+            if dataframe_timestamp.error_flags_m1.values[0] == 1:
+                self.mot1_error_2.setText('---')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 2:
+                self.mot1_error_2.setText('SW SobreCorriente')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 4:
+                self.mot1_error_2.setText('DC BUS SobreVolt')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 8:
+                self.mot1_error_2.setText('Secuencia Hall Mala')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 16:
+                self.mot1_error_2.setText('Watchdog Reset')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 32:
+                self.mot1_error_2.setText('CFG Error')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 64:
+                self.mot1_error_2.setText('15V. UV')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 128:
+                self.mot1_error_2.setText('IGBT Desaturación')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 256:
+                self.mot1_error_2.setText('+15% vel lim mot')
+            else:
+                self.mot1_error_2.setText('---')
+
+            if dataframe_timestamp.error_flags_m1.values[0] == 1:
+                self.mot2_error_1.setText('---')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 2:
+                self.mot2_error_1.setText('SW SobreCorriente')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 4:
+                self.mot2_error_1.setText('DC BUS SobreVolt')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 8:
+                self.mot2_error_1.setText('Secuencia Hall Mala')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 16:
+                self.mot2_error_1.setText('Watchdog Reset')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 32:
+                self.mot2_error_1.setText('CFG Error')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 64:
+                self.mot2_error_1.setText('15V. UV')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 128:
+                self.mot2_error_1.setText('IGBT Desaturación')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 256:
+                self.mot2_error_1.setText('+15% vel lim mot')
+            else:
+                self.mot2_error_1.setText('---')
+
+            if dataframe_timestamp.error_flags_m1.values[0] == 1:
+                self.mot2_error_2.setText('---')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 2:
+                self.mot2_error2.setText('SW SobreCorriente')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 4:
+                self.mot2_error2.setText('DC BUS SobreVolt')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 8:
+                self.mot2_error2.setText('Secuencia Hall Mala')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 16:
+                self.mot2_error2.setText('Watchdog Reset')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 32:
+                self.mot2_error2.setText('CFG Error')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 64:
+                self.mot2_error2.setText('15V. UV')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 128:
+                self.mot2_error2.setText('IGBT Desaturación')
+            elif dataframe_timestamp.error_flags_m1.values[0] == 256:
+                self.mot2_error2.setText('+15% vel lim mot')
+            else:
+                self.mot2_error2.setText('---')
+
 
     @QtCore.pyqtSlot(dict)
     def recibir_data_serial(self, data):
